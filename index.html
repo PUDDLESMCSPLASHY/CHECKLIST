@@ -1,0 +1,1091 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Compton SOP Tracker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: #1e293b;
+      border-right: 1px solid #334155;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      position: fixed;
+      left: 0;
+      top: 0;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .sidebar-header h1 {
+      font-size: 1.25rem;
+      color: #a78bfa;
+      margin-bottom: 4px;
+    }
+
+    .sidebar-header p {
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .new-checklist-btn {
+      margin: 16px;
+      padding: 12px 16px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .new-checklist-btn:hover {
+      background: #6d28d9;
+    }
+
+    .checklist-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .checklist-section-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #64748b;
+      padding: 12px 12px 8px;
+      letter-spacing: 0.05em;
+    }
+
+    .checklist-item {
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 4px;
+      transition: background 0.2s;
+    }
+
+    .checklist-item:hover {
+      background: #334155;
+    }
+
+    .checklist-item.active {
+      background: #3b2d6b;
+      border: 1px solid #7c3aed;
+    }
+
+    .checklist-item-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .checklist-item-meta {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-container {
+      height: 6px;
+      background: #334155;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s, background 0.3s;
+    }
+
+    .progress-red { background: #ef4444; }
+    .progress-yellow { background: #eab308; }
+    .progress-green { background: #22c55e; }
+
+    .archived-section {
+      border-top: 1px solid #334155;
+    }
+
+    .archived-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      cursor: pointer;
+      color: #64748b;
+      font-size: 0.8rem;
+    }
+
+    .archived-toggle:hover {
+      background: #334155;
+    }
+
+    .archived-list {
+      display: none;
+      padding: 0 8px 8px;
+    }
+
+    .archived-list.show {
+      display: block;
+    }
+
+    .archived-item {
+      opacity: 0.6;
+    }
+
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 280px;
+      padding: 32px;
+      min-height: 100vh;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 60vh;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .empty-state-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h2 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+      color: #94a3b8;
+    }
+
+    /* Checklist View */
+    .checklist-view {
+      display: none;
+      max-width: 700px;
+    }
+
+    .checklist-view.active {
+      display: block;
+    }
+
+    .checklist-header {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .checklist-header h2 {
+      font-size: 1.75rem;
+      color: #f1f5f9;
+      margin-bottom: 8px;
+    }
+
+    .checklist-header-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+
+    .checklist-header-meta span {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .booking-type-badge {
+      background: #7c3aed;
+      color: white;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .checklist-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .btn-archive, .btn-delete {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .btn-archive {
+      background: #374151;
+      color: #e2e8f0;
+    }
+
+    .btn-archive:hover {
+      background: #4b5563;
+    }
+
+    .btn-delete {
+      background: #7f1d1d;
+      color: #fecaca;
+    }
+
+    .btn-delete:hover {
+      background: #991b1b;
+    }
+
+    /* Tasks */
+    .task-list {
+      list-style: none;
+    }
+
+    .task-item {
+      padding: 14px 16px;
+      background: #1e293b;
+      border-radius: 8px;
+      margin-bottom: 8px;
+      border: 1px solid #334155;
+      transition: border-color 0.2s;
+    }
+
+    .task-item:hover {
+      border-color: #475569;
+    }
+
+    .task-item.completed {
+      opacity: 0.6;
+      background: #1a2332;
+    }
+
+    .task-item.completed .task-label {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+
+    .task-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .task-checkbox {
+      width: 20px;
+      height: 20px;
+      accent-color: #7c3aed;
+      cursor: pointer;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .task-content {
+      flex: 1;
+    }
+
+    .task-label {
+      font-size: 0.95rem;
+      color: #e2e8f0;
+      cursor: pointer;
+    }
+
+    .task-deadline {
+      font-size: 0.75rem;
+      color: #f59e0b;
+      margin-top: 4px;
+    }
+
+    .task-deadline.overdue {
+      color: #ef4444;
+    }
+
+    .task-timestamp {
+      font-size: 0.7rem;
+      color: #22c55e;
+      margin-top: 4px;
+    }
+
+    /* Sub-tasks */
+    .subtask-container {
+      margin-top: 12px;
+      margin-left: 32px;
+      padding-left: 16px;
+      border-left: 2px solid #334155;
+    }
+
+    .subtask-group-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #7c3aed;
+      margin-bottom: 8px;
+      margin-top: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    .subtask-group-title:first-child {
+      margin-top: 0;
+    }
+
+    .subtask-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+    }
+
+    .subtask-item.completed .subtask-label {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+
+    .subtask-checkbox {
+      width: 16px;
+      height: 16px;
+      accent-color: #7c3aed;
+      cursor: pointer;
+    }
+
+    .subtask-label {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .subtask-timestamp {
+      font-size: 0.65rem;
+      color: #22c55e;
+      margin-left: auto;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.show {
+      display: flex;
+    }
+
+    .modal {
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      width: 90%;
+      max-width: 450px;
+      border: 1px solid #334155;
+    }
+
+    .modal h3 {
+      font-size: 1.25rem;
+      margin-bottom: 20px;
+      color: #f1f5f9;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 6px;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="date"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #7c3aed;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .radio-option input {
+      accent-color: #7c3aed;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .radio-option span {
+      font-size: 0.9rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .btn-cancel, .btn-create {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+
+    .btn-cancel {
+      background: #374151;
+      color: #e2e8f0;
+    }
+
+    .btn-cancel:hover {
+      background: #4b5563;
+    }
+
+    .btn-create {
+      background: #7c3aed;
+      color: white;
+    }
+
+    .btn-create:hover {
+      background: #6d28d9;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e293b;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>🏨 The Compton</h1>
+      <p>SOP Tracker</p>
+    </div>
+    <button class="new-checklist-btn" onclick="openModal()">+ New Checklist</button>
+    
+    <div class="checklist-list" id="activeChecklists">
+      <div class="checklist-section-title">Active Checklists</div>
+      <!-- Active checklists render here -->
+    </div>
+
+    <div class="archived-section">
+      <div class="archived-toggle" onclick="toggleArchived()">
+        <span>📁 Archived</span>
+        <span id="archivedArrow">▶</span>
+      </div>
+      <div class="archived-list" id="archivedList">
+        <!-- Archived checklists render here -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">📋</div>
+      <h2>No Checklist Selected</h2>
+      <p>Create a new checklist or select one from the sidebar</p>
+    </div>
+
+    <div class="checklist-view" id="checklistView">
+      <!-- Active checklist renders here -->
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <h3>Create New Checklist</h3>
+      <div class="form-group">
+        <label>Group Name</label>
+        <input type="text" id="groupName" placeholder="e.g., Smith Wedding">
+      </div>
+      <div class="form-group">
+        <label>Arrival Date</label>
+        <input type="date" id="arrivalDate">
+      </div>
+      <div class="form-group">
+        <label>Contact Name</label>
+        <input type="text" id="contactName" placeholder="e.g., John Smith">
+      </div>
+      <div class="form-group">
+        <label>Booking Type</label>
+        <div class="radio-group">
+          <label class="radio-option">
+            <input type="radio" name="bookingType" value="rooms" checked>
+            <span>Rooms Only</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="bookingType" value="event">
+            <span>Event Only</span>
+          </label>
+          <label class="radio-option">
+            <input type="radio" name="bookingType" value="both">
+            <span>Rooms and Event</span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+        <button class="btn-create" onclick="createChecklist()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Data store
+    let checklists = JSON.parse(localStorage.getItem('comptonChecklists')) || [];
+    let activeChecklistId = null;
+
+    // Task templates
+    const taskTemplates = {
+      rooms: [
+        { id: 'contract-sent', label: 'Contract Sent' },
+        { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'sertifi-emily', label: 'Send Email Notification to Emily in Sertifi' },
+        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM, cc RevMan' },
+        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
+        { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
+        { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
+        { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { 
+          id: 'add-note-csm', 
+          label: 'Add Note, Tag CSM',
+          subtasks: [
+            { id: 'sub-arrival', label: 'Arrival Date', group: 'rooms' },
+            { id: 'sub-departure', label: 'Departure Date', group: 'rooms' },
+            { id: 'sub-transport', label: 'Transportation Method', group: 'rooms' },
+            { id: 'sub-flight', label: 'Flight Manifest (if applicable)', group: 'rooms' },
+            { id: 'sub-parking', label: 'Parking Needs', group: 'rooms' },
+            { id: 'sub-ada', label: 'ADA Accessibility', group: 'rooms' },
+            { id: 'sub-agenda', label: 'Agenda', group: 'rooms' },
+            { id: 'sub-upsell-rooms', label: 'Upsell Opportunities', group: 'rooms' }
+          ]
+        },
+        { id: 'confirm-notes', label: 'Confirm All Notes Received' },
+        { id: 'intro-email', label: 'Send Introductory Email' }
+      ],
+      event: [
+        { id: 'contract-sent', label: 'Contract Sent' },
+        { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
+        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM, cc DOCE and RevMan' },
+        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
+        { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
+        { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
+        { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { 
+          id: 'add-note-csm', 
+          label: 'Add Note, Tag CSM',
+          subtasks: [
+            { id: 'sub-questionnaire', label: 'Review Questions in Questionnaire', group: 'event' },
+            { id: 'sub-history', label: 'Client Relationship History', group: 'event' },
+            { id: 'sub-concessions', label: 'Special Concessions', group: 'event' },
+            { id: 'sub-fnb', label: 'Any F&B Notes', group: 'event' },
+            { id: 'sub-av', label: 'Anticipated A/V Needs', group: 'event' },
+            { id: 'sub-vendors', label: 'External Vendor Needs', group: 'event' },
+            { id: 'sub-billing', label: 'Billing and Deposit Information', group: 'event' },
+            { id: 'sub-upsell-event', label: 'Upselling Opportunities', group: 'event' }
+          ]
+        },
+        { id: 'confirm-notes', label: 'Confirm All Notes Received' },
+        { id: 'intro-email', label: 'Send Introductory Email' }
+      ],
+      both: [
+        { id: 'contract-sent', label: 'Contract Sent' },
+        { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
+        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM, cc DOCE and RevMan' },
+        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
+        { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
+        { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
+        { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { 
+          id: 'add-note-csm', 
+          label: 'Add Note, Tag CSM',
+          subtasks: [
+            { id: 'sub-arrival', label: 'Arrival Date', group: 'rooms' },
+            { id: 'sub-departure', label: 'Departure Date', group: 'rooms' },
+            { id: 'sub-transport', label: 'Transportation Method', group: 'rooms' },
+            { id: 'sub-flight', label: 'Flight Manifest (if applicable)', group: 'rooms' },
+            { id: 'sub-parking', label: 'Parking Needs', group: 'rooms' },
+            { id: 'sub-ada', label: 'ADA Accessibility', group: 'rooms' },
+            { id: 'sub-agenda', label: 'Agenda', group: 'rooms' },
+            { id: 'sub-upsell-rooms', label: 'Upsell Opportunities', group: 'rooms' },
+            { id: 'sub-questionnaire', label: 'Review Questions in Questionnaire', group: 'event' },
+            { id: 'sub-history', label: 'Client Relationship History', group: 'event' },
+            { id: 'sub-concessions', label: 'Special Concessions', group: 'event' },
+            { id: 'sub-fnb', label: 'Any F&B Notes', group: 'event' },
+            { id: 'sub-av', label: 'Anticipated A/V Needs', group: 'event' },
+            { id: 'sub-vendors', label: 'External Vendor Needs', group: 'event' },
+            { id: 'sub-billing', label: 'Billing and Deposit Information', group: 'event' },
+            { id: 'sub-upsell-event', label: 'Upselling Opportunities', group: 'event' }
+          ]
+        },
+        { id: 'confirm-notes', label: 'Confirm All Notes Received' },
+        { id: 'intro-email', label: 'Send Introductory Email' }
+      ]
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      renderSidebar();
+    });
+
+    // Modal functions
+    function openModal() {
+      document.getElementById('modalOverlay').classList.add('show');
+      document.getElementById('groupName').focus();
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('show');
+      document.getElementById('groupName').value = '';
+      document.getElementById('arrivalDate').value = '';
+      document.getElementById('contactName').value = '';
+      document.querySelector('input[name="bookingType"][value="rooms"]').checked = true;
+    }
+
+    function closeModalOutside(e) {
+      if (e.target.id === 'modalOverlay') closeModal();
+    }
+
+    // Create checklist
+    function createChecklist() {
+      const groupName = document.getElementById('groupName').value.trim();
+      const arrivalDate = document.getElementById('arrivalDate').value;
+      const contactName = document.getElementById('contactName').value.trim();
+      const bookingType = document.querySelector('input[name="bookingType"]:checked').value;
+
+      if (!groupName) {
+        alert('Please enter a group name');
+        return;
+      }
+
+      const checklist = {
+        id: Date.now().toString(),
+        groupName,
+        arrivalDate,
+        contactName,
+        bookingType,
+        createdAt: new Date().toISOString(),
+        archived: false,
+        archivedAt: null,
+        tasks: JSON.parse(JSON.stringify(taskTemplates[bookingType])).map(task => ({
+          ...task,
+          completed: false,
+          completedAt: null,
+          subtasks: task.subtasks ? task.subtasks.map(st => ({
+            ...st,
+            completed: false,
+            completedAt: null
+          })) : null
+        }))
+      };
+
+      checklists.push(checklist);
+      saveData();
+      renderSidebar();
+      selectChecklist(checklist.id);
+      closeModal();
+    }
+
+    // Save to localStorage
+    function saveData() {
+      localStorage.setItem('comptonChecklists', JSON.stringify(checklists));
+    }
+
+    // Render sidebar
+    function renderSidebar() {
+      const activeContainer = document.getElementById('activeChecklists');
+      const archivedContainer = document.getElementById('archivedList');
+
+      const active = checklists.filter(c => !c.archived);
+      const archived = checklists.filter(c => c.archived);
+
+      activeContainer.innerHTML = '<div class="checklist-section-title">Active Checklists</div>';
+      
+      if (active.length === 0) {
+        activeContainer.innerHTML += '<p style="padding: 12px; color: #64748b; font-size: 0.85rem;">No active checklists</p>';
+      } else {
+        active.forEach(checklist => {
+          activeContainer.innerHTML += createChecklistItem(checklist);
+        });
+      }
+
+      archivedContainer.innerHTML = '';
+      archived.forEach(checklist => {
+        archivedContainer.innerHTML += createChecklistItem(checklist, true);
+      });
+
+      document.getElementById('archivedArrow').textContent = archived.length > 0 ? `▶ (${archived.length})` : '▶';
+    }
+
+    function createChecklistItem(checklist, isArchived = false) {
+      const progress = calculateProgress(checklist);
+      const progressClass = progress < 34 ? 'progress-red' : progress < 67 ? 'progress-yellow' : 'progress-green';
+      const activeClass = checklist.id === activeChecklistId ? 'active' : '';
+      const archivedClass = isArchived ? 'archived-item' : '';
+      
+      const typeLabels = { rooms: 'Rooms', event: 'Event', both: 'Rooms + Event' };
+
+      return `
+        <div class="checklist-item ${activeClass} ${archivedClass}" onclick="selectChecklist('${checklist.id}')">
+          <div class="checklist-item-name">${checklist.groupName}</div>
+          <div class="checklist-item-meta">${typeLabels[checklist.bookingType]} • ${Math.round(progress)}%</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar ${progressClass}" style="width: ${progress}%"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    function calculateProgress(checklist) {
+      let total = 0;
+      let completed = 0;
+
+      checklist.tasks.forEach(task => {
+        if (task.subtasks) {
+          task.subtasks.forEach(st => {
+            total++;
+            if (st.completed) completed++;
+          });
+        } else {
+          total++;
+          if (task.completed) completed++;
+        }
+      });
+
+      return total > 0 ? (completed / total) * 100 : 0;
+    }
+
+    // Select checklist
+    function selectChecklist(id) {
+      activeChecklistId = id;
+      renderSidebar();
+      renderChecklist();
+    }
+
+    // Render checklist view
+    function renderChecklist() {
+      const checklist = checklists.find(c => c.id === activeChecklistId);
+      const emptyState = document.getElementById('emptyState');
+      const checklistView = document.getElementById('checklistView');
+
+      if (!checklist) {
+        emptyState.style.display = 'flex';
+        checklistView.classList.remove('active');
+        return;
+      }
+
+      emptyState.style.display = 'none';
+      checklistView.classList.add('active');
+
+      const typeLabels = { rooms: 'Rooms Only', event: 'Event Only', both: 'Rooms and Event' };
+      const createdDate = new Date(checklist.createdAt).toLocaleDateString();
+      const arrivalDisplay = checklist.arrivalDate ? new Date(checklist.arrivalDate + 'T00:00:00').toLocaleDateString() : 'Not set';
+
+      let tasksHtml = '';
+      checklist.tasks.forEach((task, index) => {
+        tasksHtml += renderTask(checklist, task, index);
+      });
+
+      checklistView.innerHTML = `
+        <div class="checklist-header">
+          <h2>${checklist.groupName}</h2>
+          <div class="checklist-header-meta">
+            <span><span class="booking-type-badge">${typeLabels[checklist.bookingType]}</span></span>
+            <span>📅 Arrival: ${arrivalDisplay}</span>
+            <span>👤 ${checklist.contactName || 'No contact'}</span>
+            <span>🕐 Created: ${createdDate}</span>
+          </div>
+          <div class="checklist-actions">
+            ${checklist.archived 
+              ? `<button class="btn-archive" onclick="unarchiveChecklist('${checklist.id}')">↩ Restore</button>`
+              : `<button class="btn-archive" onclick="archiveChecklist('${checklist.id}')">📁 Archive</button>`
+            }
+            <button class="btn-delete" onclick="deleteChecklist('${checklist.id}')">🗑 Delete</button>
+          </div>
+        </div>
+        <ul class="task-list">
+          ${tasksHtml}
+        </ul>
+      `;
+    }
+
+    function renderTask(checklist, task, index) {
+      const completedClass = task.completed ? 'completed' : '';
+      const deadlineHtml = renderDeadline(checklist, task);
+      const timestampHtml = task.completedAt 
+        ? `<div class="task-timestamp">✓ Completed ${new Date(task.completedAt).toLocaleString()}</div>` 
+        : '';
+
+      let subtasksHtml = '';
+      if (task.subtasks) {
+        const roomsSubs = task.subtasks.filter(st => st.group === 'rooms');
+        const eventSubs = task.subtasks.filter(st => st.group === 'event');
+
+        subtasksHtml = '<div class="subtask-container">';
+        
+        if (roomsSubs.length > 0 && eventSubs.length > 0) {
+          subtasksHtml += '<div class="subtask-group-title">Rooms Details</div>';
+          roomsSubs.forEach(st => {
+            subtasksHtml += renderSubtask(checklist.id, task.id, st);
+          });
+          subtasksHtml += '<div class="subtask-group-title">Event Details</div>';
+          eventSubs.forEach(st => {
+            subtasksHtml += renderSubtask(checklist.id, task.id, st);
+          });
+        } else {
+          task.subtasks.forEach(st => {
+            subtasksHtml += renderSubtask(checklist.id, task.id, st);
+          });
+        }
+        
+        subtasksHtml += '</div>';
+      }
+
+      const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+      const checkboxDisabled = hasSubtasks ? 'disabled' : '';
+
+      return `
+        <li class="task-item ${completedClass}">
+          <div class="task-main">
+            <input type="checkbox" class="task-checkbox" 
+              ${task.completed ? 'checked' : ''} 
+              ${checkboxDisabled}
+              onchange="toggleTask('${checklist.id}', '${task.id}')">
+            <div class="task-content">
+              <div class="task-label">${task.label}</div>
+              ${deadlineHtml}
+              ${timestampHtml}
+            </div>
+          </div>
+          ${subtasksHtml}
+        </li>
+      `;
+    }
+
+    function renderSubtask(checklistId, taskId, subtask) {
+      const completedClass = subtask.completed ? 'completed' : '';
+      const timestampHtml = subtask.completedAt 
+        ? `<span class="subtask-timestamp">✓ ${new Date(subtask.completedAt).toLocaleDateString()}</span>` 
+        : '';
+
+      return `
+        <div class="subtask-item ${completedClass}">
+          <input type="checkbox" class="subtask-checkbox" 
+            ${subtask.completed ? 'checked' : ''} 
+            onchange="toggleSubtask('${checklistId}', '${taskId}', '${subtask.id}')">
+          <span class="subtask-label">${subtask.label}</span>
+          ${timestampHtml}
+        </div>
+      `;
+    }
+
+    function renderDeadline(checklist, task) {
+      if (!task.deadline) return '';
+
+      let deadlineDate;
+      
+      if (task.deadline === 'creation+24h') {
+        deadlineDate = new Date(checklist.createdAt);
+        deadlineDate.setHours(deadlineDate.getHours() + 24);
+      } else if (task.deadline.startsWith('task:')) {
+        const [_, triggerTaskId] = task.deadline.split(':');
+        const [triggerId, offset] = triggerTaskId.split('+');
+        const triggerTask = checklist.tasks.find(t => t.id === triggerId);
+        
+        if (triggerTask && triggerTask.completedAt) {
+          deadlineDate = new Date(triggerTask.completedAt);
+          deadlineDate.setHours(deadlineDate.getHours() + 24);
+        } else {
+          return '<div class="task-deadline">⏳ Due 24h after "Email Request to Flip Definite" is checked</div>';
+        }
+      }
+
+      if (deadlineDate) {
+        const now = new Date();
+        const isOverdue = now > deadlineDate && !task.completed;
+        const overdueClass = isOverdue ? 'overdue' : '';
+        const icon = isOverdue ? '⚠️' : '⏰';
+        return `<div class="task-deadline ${overdueClass}">${icon} Due: ${deadlineDate.toLocaleString()}</div>`;
+      }
+
+      return '';
+    }
+
+    // Toggle task
+    function toggleTask(checklistId, taskId) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      const task = checklist.tasks.find(t => t.id === taskId);
+      
+      task.completed = !task.completed;
+      task.completedAt = task.completed ? new Date().toISOString() : null;
+
+      saveData();
+      renderSidebar();
+      renderChecklist();
+    }
+
+    // Toggle subtask
+    function toggleSubtask(checklistId, taskId, subtaskId) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      const task = checklist.tasks.find(t => t.id === taskId);
+      const subtask = task.subtasks.find(st => st.id === subtaskId);
+      
+      subtask.completed = !subtask.completed;
+      subtask.completedAt = subtask.completed ? new Date().toISOString() : null;
+
+      // Check if all subtasks are complete
+      const allComplete = task.subtasks.every(st => st.completed);
+      task.completed = allComplete;
+      task.completedAt = allComplete ? new Date().toISOString() : null;
+
+      saveData();
+      renderSidebar();
+      renderChecklist();
+    }
+
+    // Archive/Unarchive
+    function archiveChecklist(id) {
+      const checklist = checklists.find(c => c.id === id);
+      checklist.archived = true;
+      checklist.archivedAt = new Date().toISOString();
+      saveData();
+      renderSidebar();
+      
+      // Select another active checklist or show empty state
+      const active = checklists.filter(c => !c.archived);
+      if (active.length > 0) {
+        selectChecklist(active[0].id);
+      } else {
+        activeChecklistId = null;
+        renderChecklist();
+      }
+    }
+
+    function unarchiveChecklist(id) {
+      const checklist = checklists.find(c => c.id === id);
+      checklist.archived = false;
+      checklist.archivedAt = null;
+      saveData();
+      renderSidebar();
+      renderChecklist();
+    }
+
+    // Delete checklist
+    function deleteChecklist(id) {
+      if (!confirm('Are you sure you want to permanently delete this checklist?')) return;
+      
+      checklists = checklists.filter(c => c.id !== id);
+      saveData();
+      renderSidebar();
+      
+      if (activeChecklistId === id) {
+        const active = checklists.filter(c => !c.archived);
+        if (active.length > 0) {
+          selectChecklist(active[0].id);
+        } else {
+          activeChecklistId = null;
+          renderChecklist();
+        }
+      }
+    }
+
+    // Toggle archived section
+    function toggleArchived() {
+      const list = document.getElementById('archivedList');
+      list.classList.toggle('show');
+      const arrow = document.getElementById('archivedArrow');
+      const archived = checklists.filter(c => c.archived);
+      arrow.textContent = list.classList.contains('show') ? `▼ (${archived.length})` : `▶ (${archived.length})`;
+    }
+  </script>
+</body>
+</html>
