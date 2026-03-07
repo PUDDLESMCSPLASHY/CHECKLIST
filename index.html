@@ -1130,22 +1130,96 @@ UPSELL OPPORTUNITIES:`
         
         // Build pre-filled notes from lead data
         let notes = notesTemplates[bookingType];
+        
+        // GROUP
         notes = notes.replace('GROUP:', `GROUP: ${lead.account || lead.bookingName || ''}`);
+        
+        // CONTACT - full name (firstName lastName)
         notes = notes.replace('CONTACT:', `CONTACT: ${lead.contactName || ''}`);
+        
+        // ROOM BLOCK
         if (notes.includes('ROOM BLOCK:')) {
           const roomSummary = lead.roomBlock ? lead.roomBlock.map(r => `${r.type}: ${r.rate ? '$'+r.rate : 'TBD'}`).join(', ') : '';
           notes = notes.replace('ROOM BLOCK:', `ROOM BLOCK: ${roomSummary}`);
         }
+        
+        // CHECK-IN / CHECK-OUT
         if (notes.includes('CHECK-IN / CHECK-OUT:')) {
           notes = notes.replace('CHECK-IN / CHECK-OUT:', `CHECK-IN / CHECK-OUT: ${lead.arrival || ''} / ${lead.departure || ''}`);
         }
+        
+        // EVENT - just the event names
         if (notes.includes('EVENT:')) {
           const eventSummary = lead.events ? lead.events.map(e => e.name).join(', ') : '';
           notes = notes.replace('EVENT:', `EVENT: ${eventSummary}`);
         }
+        
+        // LOCATION - Function Room(s) joined with " and "
+        if (notes.includes('LOCATION:')) {
+          const rooms = lead.events ? [...new Set(lead.events.map(e => e.room).filter(r => r))].join(' and ') : '';
+          notes = notes.replace('LOCATION:', `LOCATION: ${rooms}`);
+        }
+        
+        // SETUP - For (Classification) on (Date) in (Room), (Setup). // For...
+        if (notes.includes('SETUP:')) {
+          let setupStr = '';
+          if (lead.events && lead.events.length > 0) {
+            const formatClassification = (c) => {
+              if (!c) return '';
+              return c.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            };
+            const formatDate = (d) => {
+              if (!d) return '';
+              const date = new Date(d + 'T12:00:00');
+              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            };
+            setupStr = lead.events.map(e => 
+              `For ${formatClassification(e.classification)} on ${formatDate(e.date)} in ${e.room || 'TBD'}, ${e.setup || 'TBD'}`
+            ).join('. // ');
+          }
+          notes = notes.replace('SETUP:', `SETUP: ${setupStr}`);
+        }
+        
+        // TIME - For (Classification) on (Date) in (Room), (Start) - (End). // For...
+        if (notes.includes('TIME:')) {
+          let timeStr = '';
+          if (lead.events && lead.events.length > 0) {
+            const formatClassification = (c) => {
+              if (!c) return '';
+              return c.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            };
+            const formatDate = (d) => {
+              if (!d) return '';
+              const date = new Date(d + 'T12:00:00');
+              return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            };
+            const formatTime = (t) => {
+              if (!t) return 'TBD';
+              // Convert 24hr to 12hr
+              const [h, m] = t.split(':');
+              const hour = parseInt(h);
+              const ampm = hour >= 12 ? 'PM' : 'AM';
+              const hour12 = hour % 12 || 12;
+              return `${hour12}:${m} ${ampm}`;
+            };
+            timeStr = lead.events.map(e => 
+              `For ${formatClassification(e.classification)} on ${formatDate(e.date)} in ${e.room || 'TBD'}, ${formatTime(e.startTime)} - ${formatTime(e.endTime)}`
+            ).join('. // ');
+          }
+          notes = notes.replace('TIME:', `TIME: ${timeStr}`);
+        }
+        
+        // MENU - leave blank for now
+        if (notes.includes('MENU:')) {
+          notes = notes.replace('MENU:', 'MENU:');
+        }
+        
+        // DEPOSIT SCHEDULE/PAYMENT
         if (notes.includes('DEPOSIT SCHEDULE/PAYMENT:')) {
           notes = notes.replace('DEPOSIT SCHEDULE/PAYMENT:', `DEPOSIT SCHEDULE/PAYMENT: ${lead.billingType || ''}`);
         }
+        
+        // CONCESSIONS
         if (notes.includes('CONCESSIONS:')) {
           notes = notes.replace('CONCESSIONS:', `CONCESSIONS: ${lead.concessions || ''}`);
         }
