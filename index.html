@@ -1110,6 +1110,84 @@ UPSELL OPPORTUNITIES:`
       const archived = checklists.filter(c => c.archived);
       arrow.textContent = list.classList.contains('show') ? `▼ (${archived.length})` : `▶ (${archived.length})`;
     }
+    
+    // Listen for messages from Kelphi (when embedded)
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'CREATE_CHECKLIST') {
+        const lead = event.data.data;
+        
+        // Check if checklist already exists for this lead
+        const existing = checklists.find(c => c.leadId === lead.id);
+        if (existing) {
+          selectChecklist(existing.id);
+          return;
+        }
+        
+        // Map lead type to checklist type
+        let bookingType = 'rooms';
+        if (lead.type === 'events') bookingType = 'event';
+        else if (lead.type === 'both') bookingType = 'both';
+        
+        // Build pre-filled notes from lead data
+        let notes = notesTemplates[bookingType];
+        notes = notes.replace('GROUP:', `GROUP: ${lead.account || lead.bookingName || ''}`);
+        notes = notes.replace('CONTACT:', `CONTACT: ${lead.contactName || ''}`);
+        if (notes.includes('ROOM BLOCK:')) {
+          const roomSummary = lead.roomBlock ? lead.roomBlock.map(r => `${r.type}: ${r.rate ? '$'+r.rate : 'TBD'}`).join(', ') : '';
+          notes = notes.replace('ROOM BLOCK:', `ROOM BLOCK: ${roomSummary}`);
+        }
+        if (notes.includes('CHECK-IN / CHECK-OUT:')) {
+          notes = notes.replace('CHECK-IN / CHECK-OUT:', `CHECK-IN / CHECK-OUT: ${lead.arrival || ''} / ${lead.departure || ''}`);
+        }
+        if (notes.includes('EVENT:')) {
+          const eventSummary = lead.events ? lead.events.map(e => e.name).join(', ') : '';
+          notes = notes.replace('EVENT:', `EVENT: ${eventSummary}`);
+        }
+        if (notes.includes('DEPOSIT SCHEDULE/PAYMENT:')) {
+          notes = notes.replace('DEPOSIT SCHEDULE/PAYMENT:', `DEPOSIT SCHEDULE/PAYMENT: ${lead.billingType || ''}`);
+        }
+        if (notes.includes('CONCESSIONS:')) {
+          notes = notes.replace('CONCESSIONS:', `CONCESSIONS: ${lead.concessions || ''}`);
+        }
+        
+        const checklist = {
+          id: Date.now().toString(),
+          leadId: lead.id,
+          groupName: lead.bookingName || lead.account || 'Untitled',
+          arrivalDate: lead.arrival || '',
+          contactName: lead.contactName || '',
+          bookingType,
+          createdAt: new Date().toISOString(),
+          archived: false,
+          archivedAt: null,
+          notesContent: notes,
+          tasks: JSON.parse(JSON.stringify(taskTemplates[bookingType])).map(task => ({
+            ...task,
+            completed: false,
+            completedAt: null
+          }))
+        };
+        
+        checklists.push(checklist);
+        saveData();
+        renderSidebar();
+        selectChecklist(checklist.id);
+        
+        // Notify Kelphi that checklist was created
+        if (window.parent !== window) {
+          window.parent.postMessage({ type: 'CHECKLIST_CREATED', checklistId: checklist.id, leadId: lead.id }, '*');
+        }
+      }
+      
+      // Select checklist for a specific lead
+      if (event.data && event.data.type === 'SELECT_LEAD_CHECKLIST') {
+        const leadId = event.data.leadId;
+        const existing = checklists.find(c => c.leadId === leadId);
+        if (existing) {
+          selectChecklist(existing.id);
+        }
+      }
+    });
   </script>
 </body>
 </html>
