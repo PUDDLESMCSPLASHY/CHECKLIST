@@ -1135,7 +1135,8 @@ UPSELL OPPORTUNITIES:`
         notes = notes.replace('GROUP:', `GROUP: ${lead.account || lead.bookingName || ''}`);
         
         // CONTACT - full name (firstName lastName)
-        notes = notes.replace('CONTACT:', `CONTACT: ${lead.contactName || ''}`);
+        const fullName = ((lead.contactFirstName || '') + ' ' + (lead.contactLastName || '')).trim();
+        notes = notes.replace('CONTACT:', `CONTACT: ${fullName}`);
         
         // ROOM BLOCK
         if (notes.includes('ROOM BLOCK:')) {
@@ -1259,6 +1260,44 @@ UPSELL OPPORTUNITIES:`
         const existing = checklists.find(c => c.leadId === leadId);
         if (existing) {
           selectChecklist(existing.id);
+        }
+      }
+      
+      // Update checklist booking type (preserving task progress)
+      if (event.data && event.data.type === 'UPDATE_CHECKLIST_TYPE') {
+        const { leadId, newType } = event.data;
+        const existing = checklists.find(c => c.leadId === leadId);
+        if (existing) {
+          // Map lead type to checklist type
+          let bookingType = 'rooms';
+          if (newType === 'events') bookingType = 'event';
+          else if (newType === 'both') bookingType = 'both';
+          
+          if (existing.bookingType !== bookingType) {
+            // Get new tasks template
+            const newTasks = JSON.parse(JSON.stringify(taskTemplates[bookingType])).map(task => ({
+              ...task,
+              completed: false,
+              completedAt: null
+            }));
+            
+            // Preserve completed status for tasks that exist in both templates
+            newTasks.forEach(newTask => {
+              const oldTask = existing.tasks.find(t => t.id === newTask.id);
+              if (oldTask && oldTask.completed) {
+                newTask.completed = true;
+                newTask.completedAt = oldTask.completedAt;
+              }
+            });
+            
+            existing.bookingType = bookingType;
+            existing.tasks = newTasks;
+            saveData();
+            renderSidebar();
+            if (activeChecklistId === existing.id) {
+              renderChecklist();
+            }
+          }
         }
       }
     });
