@@ -149,6 +149,8 @@
     .archived-list {
       display: none;
       padding: 0 8px 8px;
+      max-height: 40vh;
+      overflow-y: auto;
     }
 
     .archived-list.show {
@@ -723,57 +725,51 @@ UPSELL OPPORTUNITIES:`
     const taskTemplates = {
       rooms: [
         { id: 'contract-sent', label: 'Contract Sent' },
-        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'extend-cutoff', label: 'Extend Cutoff Date by one (1)' },
-        { id: 'sertifi-emily', label: 'Send Email Notification to Emily in Sertifi' },
-        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
-        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
-        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM; cc REVMAN, ACCT, CSM' },
-        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
-        { id: 'status-definite', label: 'Booking Status: Definite' },
-        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
         { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
         { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { id: 'sertifi-emily', label: 'Send Email Notification to Emily in Sertifi' },
+        { id: 'ping-emily', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM; cc REVMAN, ACCT, CSM' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
       ],
       event: [
         { id: 'contract-sent', label: 'Contract Sent' },
-        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'extend-cutoff', label: 'Extend Cutoff Date by one (1)' },
-        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
-        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
-        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
-        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM & DOCE; cc REVMAN, ACCT, CSM' },
-        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
-        { id: 'status-definite', label: 'Booking Status: Definite' },
-        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
         { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
         { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
+        { id: 'ping-emily', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM & DOCE; cc REVMAN, ACCT, CSM' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
       ],
       both: [
         { id: 'contract-sent', label: 'Contract Sent' },
-        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'flip-tentative', label: 'Flip to Tentative' },
+        { id: 'indicate-payment', label: 'Indicate Method of Payment' },
         { id: 'extend-cutoff', label: 'Extend Cutoff Date by one (1)' },
-        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
-        { id: 'ping-emily-1', label: 'Ping Emily', deadline: 'creation+24h' },
-        { id: 'signatures-deposits', label: 'Complete All Signatures & Applicable Deposits' },
-        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM & DOCE; cc REVMAN, ACCT, CSM' },
-        { id: 'ping-emily-2', label: 'Ping Emily', deadline: 'task:email-flip-definite+24h' },
-        { id: 'status-definite', label: 'Booking Status: Definite' },
-        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-pms', label: 'Add PMS Account Number to Delphi' },
         { id: 'update-contacts', label: 'Update Contact Details in Delphi' },
         { id: 'add-csm-service', label: 'Add CSM to Service & Catering Manager in Delphi' },
+        { id: 'sertifi-amber-emily', label: 'Send Email Notification to Amber and Emily in Sertifi' },
+        { id: 'ping-emily', label: 'Ping Emily', deadline: 'creation+24h' },
+        { id: 'email-flip-definite', label: 'Email Request to Flip Definite; DOSM & DOCE; cc REVMAN, ACCT, CSM' },
+        { id: 'status-definite', label: 'Booking Status: Definite' },
+        { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
