@@ -845,8 +845,9 @@ UPSELL OPPORTUNITIES:`
       const activeContainer = document.getElementById('activeChecklists');
       const archivedContainer = document.getElementById('archivedList');
 
-      const active = checklists.filter(c => !c.archived);
-      const archived = checklists.filter(c => c.archived);
+      // Sort alphabetically by groupName
+      const active = checklists.filter(c => !c.archived).sort((a, b) => (a.groupName || '').localeCompare(b.groupName || ''));
+      const archived = checklists.filter(c => c.archived).sort((a, b) => (a.groupName || '').localeCompare(b.groupName || ''));
 
       activeContainer.innerHTML = '<div class="checklist-section-title">Active Checklists</div>';
       
@@ -1083,9 +1084,21 @@ UPSELL OPPORTUNITIES:`
     function deleteChecklist(id) {
       if (!confirm('Are you sure you want to permanently delete this checklist?')) return;
       
+      // Find the checklist to get leadId before deleting
+      const checklist = checklists.find(c => c.id === id);
+      const leadId = checklist?.leadId;
+      
       checklists = checklists.filter(c => c.id !== id);
       saveData();
       renderSidebar();
+      
+      // Notify parent (Kelphi) that checklist was deleted
+      if (leadId && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'CHECKLIST_DELETED',
+          leadId: leadId
+        }, '*');
+      }
       
       if (activeChecklistId === id) {
         const active = checklists.filter(c => !c.archived);
