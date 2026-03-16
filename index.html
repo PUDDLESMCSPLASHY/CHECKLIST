@@ -382,6 +382,131 @@
       background: #22c55e;
     }
 
+    .btn-intro-email {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      margin-left: 8px;
+      background: #7c3aed;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      vertical-align: middle;
+    }
+
+    .btn-intro-email:hover {
+      background: #6d28d9;
+    }
+
+    /* Email Template Modal */
+    .email-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .email-modal-overlay.show {
+      display: flex;
+    }
+
+    .email-modal {
+      background: #1e293b;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .email-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid #334155;
+    }
+
+    .email-modal-header h3 {
+      margin: 0;
+      color: #f1f5f9;
+      font-size: 1.1rem;
+    }
+
+    .email-modal-close {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .email-modal-close:hover {
+      color: #f1f5f9;
+    }
+
+    .email-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .email-template-text {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    .email-modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 16px 20px;
+      border-top: 1px solid #334155;
+    }
+
+    .email-modal-footer button {
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-copy-email {
+      background: #7c3aed;
+      color: white;
+      border: none;
+    }
+
+    .btn-copy-email:hover {
+      background: #6d28d9;
+    }
+
+    .btn-copy-email.copied {
+      background: #22c55e;
+    }
+
     .notes-textarea {
       width: 100%;
       min-height: 250px;
@@ -665,6 +790,22 @@
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
         <button class="btn-create" onclick="createChecklist()">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Template Modal -->
+  <div class="email-modal-overlay" id="emailModalOverlay" onclick="closeEmailModalOutside(event)">
+    <div class="email-modal" onclick="event.stopPropagation()">
+      <div class="email-modal-header">
+        <h3>✉️ Handover Introduction Email</h3>
+        <button class="email-modal-close" onclick="closeEmailModal()">&times;</button>
+      </div>
+      <div class="email-modal-body">
+        <div class="email-template-text" id="emailTemplateText"></div>
+      </div>
+      <div class="email-modal-footer">
+        <button class="btn-copy-email" onclick="copyEmailTemplate()">📋 Copy to Clipboard</button>
       </div>
     </div>
   </div>
@@ -970,6 +1111,11 @@ UPSELL OPPORTUNITIES:`
         `;
       }
 
+      // Add intro email button for that specific task
+      const introEmailBtn = task.id === 'intro-email' 
+        ? `<button class="btn-intro-email" onclick="event.stopPropagation(); showIntroEmailTemplate('${checklist.id}')" title="Generate intro email">✉️</button>`
+        : '';
+
       return `
         <li class="task-item ${completedClass}">
           <div class="task-main">
@@ -977,7 +1123,7 @@ UPSELL OPPORTUNITIES:`
               ${task.completed ? 'checked' : ''} 
               onchange="toggleTask('${checklist.id}', '${task.id}')">
             <div class="task-content">
-              <div class="task-label">${task.label}</div>
+              <div class="task-label">${task.label}${introEmailBtn}</div>
               ${deadlineHtml}
               ${timestampHtml}
             </div>
@@ -1048,6 +1194,72 @@ UPSELL OPPORTUNITIES:`
         btn.classList.add('copied');
         setTimeout(() => {
           btn.textContent = '📋 Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    // Email Template Functions
+    function showIntroEmailTemplate(checklistId) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      if (!checklist) return;
+      
+      const template = generateIntroEmail(checklist);
+      document.getElementById('emailTemplateText').textContent = template;
+      document.getElementById('emailModalOverlay').classList.add('show');
+    }
+
+    function generateIntroEmail(checklist) {
+      const contactFirst = (checklist.contactName || 'there').split(' ')[0];
+      const groupName = checklist.groupName || 'your group';
+      const arrivalDate = checklist.arrivalDate 
+        ? new Date(checklist.arrivalDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+        : '[arrival date]';
+      
+      let detailsSection = '';
+      
+      if (checklist.bookingType === 'rooms') {
+        detailsSection = `She'll be working with you on the details of your group's visit—things like arrival times, room assignments, ADA accommodations, and anything else you need to make your ${arrivalDate} stay seamless.`;
+      } else if (checklist.bookingType === 'event') {
+        detailsSection = `She'll be working with you on the details of your event—things like space set-up, menu selections, timing, and anything else you need to make your ${arrivalDate} event seamless.`;
+      } else {
+        detailsSection = `She'll be working with you on all the details of your visit—arrival times and room assignments, event set-up and menu selections, and everything else to make your ${arrivalDate} stay seamless.`;
+      }
+
+      return `Hi ${contactFirst},
+
+Thank you so much for getting everything completed for ${groupName}! We're excited to have you.
+
+For next steps, I wanted to e-introduce you to Arianna Evans, our Conference Services Manager. I've brought her up to speed on everything we've discussed so far.
+
+${detailsSection}
+
+You can expect to hear from Arianna in the next few days. In the meantime, I'm still here if you need anything at all—don't hesitate to reach out.
+
+Looking forward to hosting you!
+
+Warmly,
+Kelsey`;
+    }
+
+    function closeEmailModal() {
+      document.getElementById('emailModalOverlay').classList.remove('show');
+    }
+
+    function closeEmailModalOutside(e) {
+      if (e.target.id === 'emailModalOverlay') {
+        closeEmailModal();
+      }
+    }
+
+    function copyEmailTemplate() {
+      const text = document.getElementById('emailTemplateText').textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        btn.textContent = '✓ Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = '📋 Copy to Clipboard';
           btn.classList.remove('copied');
         }, 2000);
       });
