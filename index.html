@@ -857,8 +857,12 @@
       isSyncing = true;
       try {
         const checklistsData = { id: 'main', data: checklists, updated_at: new Date().toISOString() };
-        await supabaseClient.from('checklists').upsert(checklistsData);
-        console.log('Checklists synced to cloud');
+        const { error } = await supabaseClient.from('checklists').upsert(checklistsData, { onConflict: 'id' });
+        if (error) {
+          console.error('Supabase error:', error);
+        } else {
+          console.log('Checklists synced to cloud');
+        }
       } catch (err) {
         console.error('Sync error:', err);
       } finally {
