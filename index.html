@@ -873,9 +873,13 @@
     async function loadFromCloud() {
       if (!syncEnabled) return;
       try {
-        const { data, error } = await supabaseClient.from('checklists').select('*').eq('id', 'main').single();
-        if (data && data.data) {
-          const cloudChecklists = data.data;
+        const { data, error } = await supabaseClient.from('checklists').select('*').eq('id', 'main');
+        if (error) {
+          console.error('Load from cloud error:', error);
+          return;
+        }
+        if (data && data.length > 0 && data[0].data) {
+          const cloudChecklists = data[0].data;
           const localChecklists = JSON.parse(localStorage.getItem('comptonChecklists')) || [];
           // Use whichever has more checklists (simple merge strategy)
           if (cloudChecklists.length >= localChecklists.length) {
@@ -887,6 +891,10 @@
             await syncToCloud();
           }
           renderSidebar();
+        } else {
+          // No cloud data yet, sync local to cloud
+          console.log('No cloud data found, syncing local to cloud');
+          await syncToCloud();
         }
       } catch (err) {
         console.error('Load from cloud error:', err);
