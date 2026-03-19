@@ -856,7 +856,7 @@
       if (!syncEnabled || isSyncing) return;
       isSyncing = true;
       try {
-        const checklistsData = { id: 'main', data: checklists, updatedAt: new Date().toISOString() };
+        const checklistsData = { id: 'main', data: checklists, updated_at: new Date().toISOString() };
         await supabaseClient.from('checklists').upsert(checklistsData);
         console.log('Checklists synced to cloud');
       } catch (err) {
