@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Compton SOP Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -839,9 +840,57 @@
   </div>
 
   <script>
+    // Supabase setup
+    const SUPABASE_URL = 'https://jwxdolqobyspalaymkyq.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3eGRvbHFvYnlzcGFsYXlta3lxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNzIwOTMsImV4cCI6MjA4ODg0ODA5M30.kagxIB5lhbriS5fcGXzA6fcY5wfK1KRekWP-Fc4BhPU';
+    const supabaseClient = (typeof supabase !== 'undefined' && supabase.createClient) ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+    let syncEnabled = !!supabaseClient;
+    let isSyncing = false;
+    
     // Data store
     let checklists = JSON.parse(localStorage.getItem('comptonChecklists')) || [];
     let activeChecklistId = null;
+    
+    // Cloud sync functions
+    async function syncToCloud() {
+      if (!syncEnabled || isSyncing) return;
+      isSyncing = true;
+      try {
+        const checklistsData = { id: 'main', data: checklists, updatedAt: new Date().toISOString() };
+        await supabaseClient.from('checklists').upsert(checklistsData);
+        console.log('Checklists synced to cloud');
+      } catch (err) {
+        console.error('Sync error:', err);
+      } finally {
+        isSyncing = false;
+      }
+    }
+    
+    async function loadFromCloud() {
+      if (!syncEnabled) return;
+      try {
+        const { data, error } = await supabaseClient.from('checklists').select('*').eq('id', 'main').single();
+        if (data && data.data) {
+          const cloudChecklists = data.data;
+          const localChecklists = JSON.parse(localStorage.getItem('comptonChecklists')) || [];
+          // Use whichever has more checklists (simple merge strategy)
+          if (cloudChecklists.length >= localChecklists.length) {
+            checklists = cloudChecklists;
+            localStorage.setItem('comptonChecklists', JSON.stringify(checklists));
+            console.log('Loaded', checklists.length, 'checklists from cloud');
+          } else {
+            console.log('Local has more checklists, will sync to cloud');
+            await syncToCloud();
+          }
+          renderSidebar();
+        }
+      } catch (err) {
+        console.error('Load from cloud error:', err);
+      }
+    }
+    
+    // Load from cloud on startup
+    loadFromCloud();
 
     // Notes templates
     const notesTemplates = {
@@ -1004,9 +1053,10 @@ UPSELL OPPORTUNITIES:`
       closeModal();
     }
 
-    // Save to localStorage
+    // Save to localStorage and sync to cloud
     function saveData() {
       localStorage.setItem('comptonChecklists', JSON.stringify(checklists));
+      syncToCloud();
     }
 
     // Render sidebar
