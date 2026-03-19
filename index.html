@@ -18,6 +18,26 @@
       min-height: 100vh;
       display: flex;
     }
+    
+    /* Light Mode */
+    body.light-mode { background: #f5f6fa; color: #2d3436; }
+    body.light-mode .sidebar { background: #fff; border-color: #e1e4e8; }
+    body.light-mode .sidebar-header { border-color: #e1e4e8; }
+    body.light-mode .sidebar-header h1 { color: #7c3aed; }
+    body.light-mode .sidebar-header p { color: #636e72; }
+    body.light-mode .checklist-item { background: #f8f9fa; border-color: #e1e4e8; }
+    body.light-mode .checklist-item:hover { background: #f0f0f0; }
+    body.light-mode .checklist-item.active { background: #e6f0ff; border-color: #0984e3; }
+    body.light-mode .checklist-item h3 { color: #2d3436; }
+    body.light-mode .checklist-item p { color: #636e72; }
+    body.light-mode .main-content { background: #f5f6fa; }
+    body.light-mode .task-section { background: #fff; border-color: #e1e4e8; }
+    body.light-mode .task-section h2 { color: #2d3436; border-color: #e1e4e8; }
+    body.light-mode .task-item { background: #f8f9fa; border-color: #e1e4e8; color: #2d3436; }
+    body.light-mode .task-item:hover { background: #f0f0f0; }
+    body.light-mode .progress-text { color: #636e72; }
+    body.light-mode .archived-section { background: #fff; border-color: #e1e4e8; }
+    body.light-mode .archived-section h3 { color: #636e72; }
 
     /* Sidebar */
     .sidebar {
@@ -1521,6 +1541,17 @@ Kelsey`;
               renderChecklist();
             }
           }
+        }
+      }
+    });
+    
+    // Listen for theme changes from parent (Kelphi)
+    window.addEventListener('message', function(event) {
+      if (event.data && event.data.type === 'theme-change') {
+        if (event.data.theme === 'light') {
+          document.body.classList.add('light-mode');
+        } else {
+          document.body.classList.remove('light-mode');
         }
       }
     });
