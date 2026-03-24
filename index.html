@@ -967,6 +967,7 @@ UPSELL OPPORTUNITIES:`
         { id: 'status-definite', label: 'Booking Status: Definite' },
         { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
+        { id: 'add-thankyou-task', label: "Add 'Thank You' Letter Task", conditional: 'thankyou' },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
       ],
@@ -984,6 +985,7 @@ UPSELL OPPORTUNITIES:`
         { id: 'status-definite', label: 'Booking Status: Definite' },
         { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
+        { id: 'add-thankyou-task', label: "Add 'Thank You' Letter Task", conditional: 'thankyou' },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
       ],
@@ -1001,6 +1003,7 @@ UPSELL OPPORTUNITIES:`
         { id: 'status-definite', label: 'Booking Status: Definite' },
         { id: 'save-contract', label: 'Save Signed Contract' },
         { id: 'add-note-csm', label: 'Add Note, Tag CSM', hasNotesTemplate: true },
+        { id: 'add-thankyou-task', label: "Add 'Thank You' Letter Task", conditional: 'thankyou' },
         { id: 'confirm-notes', label: 'Confirm All Notes Received' },
         { id: 'intro-email', label: 'Send Introductory Email' }
       ]
@@ -1549,11 +1552,19 @@ Kelsey`;
           archived: false,
           archivedAt: null,
           notesContent: notes,
-          tasks: JSON.parse(JSON.stringify(taskTemplates[bookingType])).map(task => ({
-            ...task,
-            completed: false,
-            completedAt: null
-          }))
+          tasks: JSON.parse(JSON.stringify(taskTemplates[bookingType]))
+            .filter(task => {
+              // Filter out conditional tasks if condition not met
+              if (task.conditional === 'thankyou') {
+                return lead.firstTimeBooking || lead.milestoneEvent;
+              }
+              return true;
+            })
+            .map(task => ({
+              ...task,
+              completed: false,
+              completedAt: null
+            }))
         };
         
         checklists.push(checklist);
