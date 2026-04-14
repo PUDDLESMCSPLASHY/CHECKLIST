@@ -1217,18 +1217,23 @@ UPSELL OPPORTUNITIES:`
       }
 
       // Add intro email button for that specific task
-      const introEmailBtn = task.id === 'intro-email' 
+      const introEmailBtn = task.id === 'intro-email'
         ? `<button class="btn-intro-email" onclick="event.stopPropagation(); showIntroEmailTemplate('${checklist.id}')" title="Generate intro email">✉️</button>`
+        : '';
+
+      // Add "Create in Delphi" button for the Thank-You letter task
+      const thankYouBtn = task.id === 'add-thankyou-task'
+        ? `<button class="btn-intro-email" onclick="event.stopPropagation(); openThankYouTaskModal('${checklist.id}')" title="Create thank-you letter task in Delphi" style="background:#0984e3; border-color:#0984e3; color:#fff;">📤</button>`
         : '';
 
       return `
         <li class="task-item ${completedClass}">
           <div class="task-main">
-            <input type="checkbox" class="task-checkbox" 
-              ${task.completed ? 'checked' : ''} 
+            <input type="checkbox" class="task-checkbox"
+              ${task.completed ? 'checked' : ''}
               onchange="toggleTask('${checklist.id}', '${task.id}')">
             <div class="task-content">
-              <div class="task-label">${task.label}${introEmailBtn}</div>
+              <div class="task-label">${task.label}${introEmailBtn}${thankYouBtn}</div>
               ${deadlineHtml}
               ${timestampHtml}
             </div>
@@ -1358,6 +1363,122 @@ UPSELL OPPORTUNITIES:`
     }
 
     // Email Template Functions
+    async function openThankYouTaskModal(checklistId) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      if (!checklist) return;
+      const leadId = checklist.leadId;
+      if (!leadId) {
+        alert('This checklist isn\'t linked to a Kelphi lead.');
+        return;
+      }
+
+      // Fetch suggested task fields from the server
+      let preview = null;
+      try {
+        const resp = await fetch(`${DELPHI_API}/api/sync/task-preview`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadId })
+        });
+        const result = await resp.json();
+        if (!result.ok) {
+          alert(`Couldn't load task preview: ${result.error}`);
+          return;
+        }
+        preview = result.preview;
+      } catch (e) {
+        alert(`Connection error: ${e.message}`);
+        return;
+      }
+
+      // Build milestone hint
+      let milestoneHint = '';
+      if (preview.milestoneEvent) {
+        milestoneHint = preview.detectedMilestone
+          ? `<div style="padding: 8px 10px; background: rgba(9,132,227,0.1); border: 1px solid rgba(9,132,227,0.3); border-radius: 6px; font-size: 12px; margin-bottom: 12px;">💡 Detected milestone: <strong>${preview.detectedMilestone}</strong> — the comment draft references it. Edit below if needed.</div>`
+          : `<div style="padding: 8px 10px; background: rgba(255,193,7,0.12); border: 1px solid rgba(255,193,7,0.35); border-radius: 6px; font-size: 12px; margin-bottom: 12px;">⚠️ Milestone event flagged but no milestone keyword detected in the booking. Edit the comment below to describe the milestone.</div>`;
+      }
+
+      const existing = document.getElementById('thankYouTaskModal');
+      if (existing) existing.remove();
+      const modal = document.createElement('div');
+      modal.id = 'thankYouTaskModal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:9999;';
+      modal.innerHTML = `
+        <div style="background:#fff;border-radius:8px;width:90%;max-width:640px;max-height:90vh;overflow-y:auto;padding:24px;color:#2d3436;">
+          <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Create Thank-You Letter Task in Delphi</div>
+          <div style="font-size:12px;color:#636e72;margin-bottom:16px;">For <strong>${preview.bookingName}</strong> · Assigned to <strong>${preview.ownerName}</strong></div>
+          ${milestoneHint}
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Subject</label>
+              <input type="text" id="tyt-subject" value="${preview.subject}" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;">
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Due Date (weekday, dep+5)</label>
+              <input type="date" id="tyt-dueDate" value="${preview.dueDate || ''}" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div>
+              <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Type (Delphi)</label>
+              <input type="text" id="tyt-type" value="${preview.typeValue}" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;" readonly>
+            </div>
+            <div>
+              <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Sub-Type (Delphi)</label>
+              <input type="text" id="tyt-subtype" value="${preview.subType}" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;" readonly>
+            </div>
+          </div>
+          <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Comments / Description</label>
+          <textarea id="tyt-description" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;min-height:120px;margin-bottom:8px;">${preview.description}</textarea>
+          <div id="tyt-status" style="font-size:12px;margin-bottom:10px;display:none;"></div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <button onclick="document.getElementById('thankYouTaskModal').remove()" style="padding:8px 16px;border:1px solid #e1e4e8;border-radius:4px;background:#fff;color:#2d3436;cursor:pointer;">Cancel</button>
+            <button onclick="sendThankYouTask('${checklistId}', '${preview.ownerId}', '${preview.typeValue}', '${preview.subType}')" style="padding:8px 16px;border:none;border-radius:4px;background:#0984e3;color:#fff;cursor:pointer;">Create in Delphi</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function sendThankYouTask(checklistId, ownerId, typeValue, subType) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      if (!checklist) return;
+      const subject = document.getElementById('tyt-subject').value.trim();
+      const dueDate = document.getElementById('tyt-dueDate').value;
+      const description = document.getElementById('tyt-description').value.trim();
+      const status = document.getElementById('tyt-status');
+      status.style.display = 'block';
+      status.style.color = '#636e72';
+      status.textContent = 'Creating task in Delphi…';
+      try {
+        const resp = await fetch(`${DELPHI_API}/api/sync/create-task`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: checklist.leadId,
+            subject, dueDate, description, ownerId,
+            typeValue, subType, priority: 'Normal'
+          })
+        });
+        const result = await resp.json();
+        if (result.ok) {
+          status.style.color = '#16a34a';
+          status.textContent = `✓ ${result.message}`;
+          setTimeout(() => {
+            const m = document.getElementById('thankYouTaskModal');
+            if (m) m.remove();
+          }, 1500);
+        } else {
+          status.style.color = '#dc2626';
+          status.textContent = `✗ ${result.error || 'Failed to create task'}`;
+        }
+      } catch (e) {
+        status.style.color = '#dc2626';
+        status.textContent = `✗ Connection error: ${e.message}`;
+      }
+    }
+
     function showIntroEmailTemplate(checklistId) {
       const checklist = checklists.find(c => c.id === checklistId);
       if (!checklist) return;
