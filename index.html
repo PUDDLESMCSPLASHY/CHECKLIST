@@ -1201,13 +1201,17 @@ UPSELL OPPORTUNITIES:`
           <div class="notes-template-container">
             <div class="notes-template-header">
               <span class="notes-template-title">📝 Notes Template</span>
-              <button class="btn-copy" onclick="copyNotes('${checklist.id}')">📋 Copy</button>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-copy" onclick="copyNotes('${checklist.id}')">📋 Copy</button>
+                <button class="btn-copy" onclick="sendNotesToDelphi('${checklist.id}')" style="background:#0984e3; color:#fff; border-color:#0984e3;">📤 Send to Delphi</button>
+              </div>
             </div>
-            <textarea 
-              class="notes-textarea" 
+            <textarea
+              class="notes-textarea"
               placeholder="Fill in the details..."
               onchange="updateNotes('${checklist.id}', this.value)"
             >${checklist.notesContent || ''}</textarea>
+            <div id="delphi-note-status-${checklist.id}" style="margin-top: 6px; font-size: 12px; display:none;"></div>
           </div>
         `;
       }
@@ -1287,6 +1291,59 @@ UPSELL OPPORTUNITIES:`
     }
 
     // Copy notes to clipboard
+    // URL of the Delphi sync server (same one Kelphi calls).
+    // TODO: move to Cloudflare named tunnel so this doesn't change.
+    const DELPHI_API = 'https://strengths-wow-introduction-rental.trycloudflare.com';
+
+    function formatDateForNote(d) {
+      d = d || new Date();
+      return `${d.getMonth() + 1}.${d.getDate()}.${d.getFullYear()}`;
+    }
+
+    async function sendNotesToDelphi(checklistId) {
+      const checklist = checklists.find(c => c.id === checklistId);
+      if (!checklist) return;
+      const body = (checklist.notesContent || '').trim();
+      if (!body) {
+        alert('Nothing to send — the notes are empty.');
+        return;
+      }
+      const leadId = checklist.leadId;
+      if (!leadId) {
+        alert('This checklist isn\'t linked to a Kelphi lead.');
+        return;
+      }
+      const title = `Handover Notes - ${formatDateForNote()}`;
+      const status = document.getElementById(`delphi-note-status-${checklistId}`);
+      if (status) {
+        status.style.display = 'block';
+        status.style.color = '#888';
+        status.textContent = 'Sending to Delphi…';
+      }
+      try {
+        const resp = await fetch(`${DELPHI_API}/api/sync/create-note`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leadId, title, body })
+        });
+        const result = await resp.json();
+        if (status) {
+          if (result.ok) {
+            status.style.color = '#16a34a';
+            status.textContent = `✓ ${result.message}`;
+          } else {
+            status.style.color = '#dc2626';
+            status.textContent = `✗ ${result.error || 'Failed to send'}`;
+          }
+        }
+      } catch (e) {
+        if (status) {
+          status.style.color = '#dc2626';
+          status.textContent = `✗ Connection error: ${e.message}`;
+        }
+      }
+    }
+
     function copyNotes(checklistId) {
       const checklist = checklists.find(c => c.id === checklistId);
       navigator.clipboard.writeText(checklist.notesContent || '').then(() => {
