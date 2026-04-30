@@ -1721,9 +1721,56 @@ Kelsey`;
           notes = notes.replace('MENU:', 'MENU:');
         }
         
-        // DEPOSIT SCHEDULE/PAYMENT
+        // DEPOSIT SCHEDULE/PAYMENT — for "deposit" billing type, embed a loose
+        // outline of the schedule rows so the CSM can see the breakdown.
+        // Mirrors the in-panel preview: 25%/50%/Remaining (or 50/Remaining,
+        // or 100%) plus a 10% F&B Overage row when events are present.
         if (notes.includes('DEPOSIT SCHEDULE/PAYMENT:')) {
-          notes = notes.replace('DEPOSIT SCHEDULE/PAYMENT:', `DEPOSIT SCHEDULE/PAYMENT: ${lead.billingType || ''}`);
+          let depositLine = `DEPOSIT SCHEDULE/PAYMENT: ${lead.billingType || ''}`;
+          if (lead.billingType === 'deposit' && lead.arrival && lead.revenue) {
+            const revenue = parseFloat(lead.revenue) || 0;
+            if (revenue > 0) {
+              const arrivalDate = new Date(lead.arrival + 'T12:00:00');
+              const today = new Date();
+              const daysOut = Math.ceil((arrivalDate - today) / (1000 * 60 * 60 * 24));
+              const offsetDate = (days) => {
+                const d = new Date(arrivalDate);
+                d.setDate(d.getDate() - days);
+                return d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' });
+              };
+              const fmtMoney = (n) => '$' + Math.round(n).toLocaleString();
+
+              const rows = [];
+              if (daysOut >= 60) {
+                const a1 = Math.round(revenue * 0.25);
+                const a2 = Math.round(revenue * 0.50);
+                const a3 = revenue - a1 - a2;
+                rows.push({ dueDate: 'Upon Signing',  notes: '25%',       amount: a1 });
+                rows.push({ dueDate: offsetDate(90),  notes: '50%',       amount: a2 });
+                rows.push({ dueDate: offsetDate(30),  notes: 'Remaining', amount: a3 });
+              } else if (daysOut >= 31) {
+                const a1 = Math.round(revenue * 0.50);
+                const a2 = revenue - a1;
+                rows.push({ dueDate: 'Upon Signing',  notes: '50%',       amount: a1 });
+                rows.push({ dueDate: offsetDate(30),  notes: 'Remaining', amount: a2 });
+              } else {
+                rows.push({ dueDate: 'Upon Signing',  notes: 'Remaining', amount: revenue });
+              }
+
+              const hasEvents = (lead.type === 'events' || lead.type === 'both');
+              if (hasEvents && Array.isArray(lead.events)) {
+                const totalFbMin = lead.events.reduce((s, e) => s + (parseFloat(e.fbMin) || 0), 0);
+                const fbOverage = totalFbMin * 1.35685 * 0.10;
+                if (fbOverage > 0) {
+                  rows.push({ dueDate: offsetDate(14), notes: '10% Overage', amount: fbOverage });
+                }
+              }
+
+              const lines = rows.map(r => `- ${r.dueDate}: ${r.notes} (${fmtMoney(r.amount)})`);
+              if (lines.length) depositLine += '\n' + lines.join('\n');
+            }
+          }
+          notes = notes.replace('DEPOSIT SCHEDULE/PAYMENT:', depositLine);
         }
         
         // CONCESSIONS
