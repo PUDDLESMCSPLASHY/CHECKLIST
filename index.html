@@ -1438,7 +1438,7 @@ UPSELL OPPORTUNITIES:`
       modal.innerHTML = `
         <div style="background:#fff;border-radius:8px;width:90%;max-width:640px;max-height:90vh;overflow-y:auto;padding:24px;color:#2d3436;">
           <div style="font-size:17px;font-weight:600;margin-bottom:4px;">Create Thank-You Letter Task in Delphi</div>
-          <div style="font-size:12px;color:#636e72;margin-bottom:16px;">For <strong>${preview.bookingName}</strong> · Assigned to <strong>${preview.ownerName}</strong></div>
+          <div style="font-size:12px;color:#636e72;margin-bottom:16px;">For <strong>${preview.bookingName}</strong></div>
           ${milestoneHint}
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div>
@@ -1449,6 +1449,13 @@ UPSELL OPPORTUNITIES:`
               <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Due Date (weekday, dep+5)</label>
               <input type="date" id="tyt-dueDate" value="${preview.dueDate || ''}" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;">
             </div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <label style="display:block;font-size:11px;font-weight:500;color:#636e72;margin-bottom:4px;">Assign To</label>
+            <select id="tyt-assignee" style="width:100%;padding:8px;border:1px solid #e1e4e8;border-radius:4px;background:#fff;color:#2d3436;">
+              <option value="Rebecca Longtin|005Vx00000AV6szIAD" selected>Rebecca Longtin</option>
+              <option value="Kelsey McIntyre|005Vx00000BpIW1IAN">Kelsey McIntyre</option>
+            </select>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div>
@@ -1465,23 +1472,26 @@ UPSELL OPPORTUNITIES:`
           <div id="tyt-status" style="font-size:12px;margin-bottom:10px;display:none;"></div>
           <div style="display:flex;justify-content:flex-end;gap:10px;">
             <button onclick="document.getElementById('thankYouTaskModal').remove()" style="padding:8px 16px;border:1px solid #e1e4e8;border-radius:4px;background:#fff;color:#2d3436;cursor:pointer;">Cancel</button>
-            <button onclick="sendThankYouTask('${checklistId}', '${preview.ownerId}', '${preview.typeValue}', '${preview.subType}')" style="padding:8px 16px;border:none;border-radius:4px;background:#0984e3;color:#fff;cursor:pointer;">Create in Delphi</button>
+            <button onclick="sendThankYouTask('${checklistId}', '${preview.typeValue}', '${preview.subType}')" style="padding:8px 16px;border:none;border-radius:4px;background:#0984e3;color:#fff;cursor:pointer;">Create in Delphi</button>
           </div>
         </div>
       `;
       document.body.appendChild(modal);
     }
 
-    async function sendThankYouTask(checklistId, ownerId, typeValue, subType) {
+    async function sendThankYouTask(checklistId, typeValue, subType) {
       const checklist = checklists.find(c => c.id === checklistId);
       if (!checklist) return;
       const subject = document.getElementById('tyt-subject').value.trim();
       const dueDate = document.getElementById('tyt-dueDate').value;
       const description = document.getElementById('tyt-description').value.trim();
+      // Assignee dropdown stores "Name|UserId" — split at submission time.
+      const assigneeRaw = document.getElementById('tyt-assignee').value || '';
+      const [assigneeName, ownerId] = assigneeRaw.split('|');
       const status = document.getElementById('tyt-status');
       status.style.display = 'block';
       status.style.color = '#636e72';
-      status.textContent = 'Creating task in Delphi…';
+      status.textContent = `Creating task in Delphi for ${assigneeName}…`;
       try {
         const resp = await fetch(`${DELPHI_API}/api/sync/create-task`, {
           method: 'POST',
